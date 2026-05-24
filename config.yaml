@@ -1,0 +1,19 @@
+# Configuración del sistema de QA sobre PDFs de cálculo
+
+# Parámetros de chunking
+chunk_size: 500
+chunk_overlap: 50
+
+# Parámetros de búsqueda
+top_k_chunks: 5
+
+# Modelos
+embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+qa_model: "distilbert-base-cased-distilled-squad"
+
+# Directorios
+persist_directory: "./chroma_db"
+models_cache_dir: "./models_cache"
+
+# Configuración de confianza
+min_qa_score: 0.01  # Score mínimo para considerar una respuesta válida

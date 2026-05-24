@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  agente-calculo:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: agente-calculo
+    ports:
+      - "8501:8501"
+    volumes:
+      # Persistir datos
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+      - ./models_cache:/app/models_cache
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
