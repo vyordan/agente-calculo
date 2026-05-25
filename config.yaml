@@ -1,8 +1,7 @@
 # Configuración del sistema de QA sobre PDFs de cálculo
 
-# Parámetros de chunking
-chunk_size: 500
-chunk_overlap: 50
+chunk_size: 800  #
+chunk_overlap: 100  # 
 
 # Parámetros de búsqueda
 top_k_chunks: 5

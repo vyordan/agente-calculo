@@ -28,12 +28,16 @@ class VectorStore:
         # Crear directorio si no existe
         os.makedirs(persist_dir, exist_ok=True)
         
-        # Inicializar cliente de ChromaDB
+        # CRÍTICO: Configurar ChromaDB en modo completamente offline
         self.client = chromadb.PersistentClient(
             path=persist_dir,
             settings=Settings(
                 anonymized_telemetry=False,
-                allow_reset=True
+                allow_reset=True,
+                is_persistent=True,
+                # NUEVO: Deshabilitar todas las conexiones HTTP
+                chroma_server_http_port=None,
+                chroma_server_host=None,
             )
         )
         

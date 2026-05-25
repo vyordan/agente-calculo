@@ -26,14 +26,20 @@ class QAEngine:
         os.environ['HF_HOME'] = cache_dir
         os.environ['TRANSFORMERS_CACHE'] = cache_dir
         
+        # CRÍTICO: Forzar modo offline
+        os.environ['HF_HUB_OFFLINE'] = '1'
+        os.environ['TRANSFORMERS_OFFLINE'] = '1'
+        
         # Cargar modelo y tokenizer directamente
         self.model = AutoModelForQuestionAnswering.from_pretrained(
             model_name,
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
+            local_files_only=True  # NUEVO: Solo archivos locales
         )
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_name,
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
+            local_files_only=True  # NUEVO: Solo archivos locales
         )
         
         # Forzar CPU

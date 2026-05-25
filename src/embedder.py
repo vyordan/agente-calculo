@@ -23,12 +23,19 @@ class Embedder:
         """
         # Configurar variables de entorno para cache
         os.environ['SENTENCE_TRANSFORMERS_HOME'] = cache_dir
+        os.environ['HF_HOME'] = cache_dir
+        os.environ['TRANSFORMERS_CACHE'] = cache_dir
+        
+        # CRÍTICO: Forzar modo offline
+        os.environ['HF_HUB_OFFLINE'] = '1'
+        os.environ['TRANSFORMERS_OFFLINE'] = '1'
         
         # Cargar el modelo desde cache
         self.model = SentenceTransformer(
             model_name,
             cache_folder=cache_dir,
-            device='cpu'  # Forzar uso de CPU
+            device='cpu',  # Forzar uso de CPU
+            local_files_only=True  # NUEVO: Solo archivos locales
         )
         
         self.model_name = model_name

@@ -137,7 +137,7 @@ def main():
         # Campo de pregunta
         question = st.text_input(
             "Escribe tu pregunta sobre el documento:",
-            placeholder="Ejemplo: ¿Cuál es la derivada de x^2? o ¿Qué es una integral definida?",
+            placeholder="Ejemplo: deriva ( x ^ 2)",
             key="question_input"
         )
         
