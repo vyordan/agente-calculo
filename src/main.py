@@ -42,34 +42,34 @@ def process_pdf(pdf_path: str, config: dict = None) -> 'VectorStore':
         config = load_config()
     
     # 1. Leer PDF
-    print(f"📖 Leyendo PDF: {pdf_path}")
+    print(f"Leyendo PDF: {pdf_path}")
     text = read_pdf(pdf_path)
-    print(f"✓ Texto extraído: {len(text)} caracteres")
+    print(f"Texto extraído: {len(text)} caracteres")
     
     # 2. Dividir en chunks
-    print(f"✂️  Dividiendo texto en fragmentos...")
+    print(f"Dividiendo texto en fragmentos...")
     chunks = split_text(
         text,
         chunk_size=config['chunk_size'],
         overlap=config['chunk_overlap']
     )
-    print(f"✓ Creados {len(chunks)} fragmentos")
+    print(f"Creados {len(chunks)} fragmentos")
     
     # 3. Inicializar embedder
-    print(f"🧠 Cargando modelo de embeddings...")
+    print(f"Cargando modelo de embeddings...")
     embedder = Embedder(
         model_name=config['embedding_model'],
         cache_dir=config['models_cache_dir']
     )
-    print(f"✓ Modelo cargado: {embedder.embedding_dimension} dimensiones")
+    print(f"Modelo cargado: {embedder.embedding_dimension} dimensiones")
     
     # 4. Generar embeddings
-    print(f"🔢 Generando embeddings...")
+    print(f"Generando embeddings...")
     embeddings = embedder.embed(chunks)
-    print(f"✓ Embeddings generados: {len(embeddings)} vectores")
+    print(f"Embeddings generados: {len(embeddings)} vectores")
     
     # 5. Crear vector store
-    print(f"💾 Creando vector store...")
+    print(f"Creando vector store...")
     vector_store = VectorStore(
         persist_dir=config['persist_directory'],
         embedder=embedder
@@ -77,12 +77,12 @@ def process_pdf(pdf_path: str, config: dict = None) -> 'VectorStore':
     
     # Resetear si ya existía
     if vector_store.count() > 0:
-        print("⚠️  Vector store existente encontrado, reiniciando...")
+        print("Vector store existente encontrado, reiniciando...")
         vector_store.reset()
     
     # Añadir documentos
     vector_store.add_documents(chunks, embeddings)
-    print(f"✓ Vector store creado con {vector_store.count()} fragmentos")
+    print(f"Vector store creado con {vector_store.count()} fragmentos")
     
     return vector_store
 
@@ -116,7 +116,7 @@ def ask_question(
     
     if is_math:
         # Resolver problema matemático
-        print(f"🔬 Detectado problema matemático: {operation}")
+        print(f"Detectado problema matemático: {operation}")
         answer = solve_math(expression, operation)
         
         return {
@@ -128,7 +128,7 @@ def ask_question(
         }
     
     # 2. Búsqueda semántica
-    print(f"🔍 Buscando fragmentos relevantes...")
+    print(f"Buscando fragmentos relevantes...")
     relevant_chunks = vector_store.query(
         question,
         k=config['top_k_chunks']
@@ -142,10 +142,10 @@ def ask_question(
             'type': 'extractive'
         }
     
-    print(f"✓ Encontrados {len(relevant_chunks)} fragmentos relevantes")
+    print(f"Encontrados {len(relevant_chunks)} fragmentos relevantes")
     
     # 3. QA extractivo
-    print(f"💡 Extrayendo respuesta...")
+    print(f"Extrayendo respuesta...")
     qa_engine = QAEngine(
         model_name=config['qa_model'],
         cache_dir=config['models_cache_dir']
@@ -187,7 +187,7 @@ def main():
         question = input("\n❓ Tu pregunta: ").strip()
         
         if question.lower() in ['salir', 'exit', 'quit']:
-            print("👋 ¡Hasta luego!")
+            #print("Hasta luego!")
             break
         
         if not question:
