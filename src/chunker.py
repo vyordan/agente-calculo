@@ -4,7 +4,7 @@ Usa RecursiveCharacterTextSplitter de LangChain.
 """
 
 from typing import List
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 def split_text(
     text: str,

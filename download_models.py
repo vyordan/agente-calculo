@@ -6,7 +6,7 @@ Esto permite que la aplicación funcione completamente offline.
 import os
 import yaml
 from sentence_transformers import SentenceTransformer
-from transformers import pipeline
+from transformers import AutoModelForQuestionAnswering, AutoTokenizer
 
 def load_config():
     """Carga la configuración desde config.yaml"""
@@ -36,16 +36,17 @@ def download_models():
         config['embedding_model'],
         cache_folder=cache_dir
     )
-    print(f"✓ Modelo de embeddings descargado: {embedding_model}")
+    print(f"✓ Modelo de embeddings descargado")
     
     # 2. Descargar modelo de QA
     print(f"\n[2/2] Descargando modelo de QA: {config['qa_model']}")
-    qa_pipeline = pipeline(
-        "question-answering",
-        model=config['qa_model'],
-        tokenizer=config['qa_model'],
-        device=-1,  # Forzar CPU
-        model_kwargs={'cache_dir': cache_dir}
+    model = AutoModelForQuestionAnswering.from_pretrained(
+        config['qa_model'],
+        cache_dir=cache_dir
+    )
+    tokenizer = AutoTokenizer.from_pretrained(
+        config['qa_model'],
+        cache_dir=cache_dir
     )
     print(f"✓ Modelo de QA descargado correctamente")
     

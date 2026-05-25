@@ -4,15 +4,19 @@ Permite subir PDFs, hacer preguntas y ver respuestas con contexto.
 """
 
 import os
+import sys
 import streamlit as st
 import tempfile
 from pathlib import Path
-from .main import load_config, process_pdf, ask_question
+
+# Añadir el directorio raíz al path para importaciones
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from src.main import load_config, process_pdf, ask_question
 
 # Configuración de la página
 st.set_page_config(
     page_title="Agente de Cálculo - QA sobre PDFs",
-    page_icon="",
     layout="wide"
 )
 
@@ -36,12 +40,10 @@ def main():
     # Título y descripción
     st.title("Agente de QA sobre Libros de Cálculo")
     st.markdown("""
-    **Sistema 100% offline de preguntas y respuestas sobre PDFs de cálculo**
     
     - Extracción literal (sin generación de texto)
     - Resolución de problemas matemáticos con SymPy
-    - Búsqueda semántica inteligente
-    - Completamente offline y privado
+    - Búsqueda semántica
     """)
     
     st.divider()
@@ -50,9 +52,9 @@ def main():
     with st.sidebar:
         st.header("Configuración")
         
-        st.markdown("###Documento actual")
+        st.markdown("### Documento actual")
         if st.session_state.pdf_processed:
-            st.success(f"✓ PDF procesado")
+            st.success(f"PDF procesado")
             st.info(f"Fragmentos: {st.session_state.vector_store.count()}")
             
             if st.button("Cargar nuevo PDF"):
@@ -130,7 +132,7 @@ def main():
     
     else:
         # Interfaz de preguntas
-        st.header("❓ Haz tu pregunta")
+        st.header("Haz tu pregunta")
         
         # Campo de pregunta
         question = st.text_input(

@@ -5,7 +5,8 @@ Extrae respuestas literales del texto sin generar contenido nuevo.
 
 import os
 from typing import List, Dict
-from transformers import pipeline
+from transformers import AutoModelForQuestionAnswering, AutoTokenizer
+import torch
 
 class QAEngine:
     """
@@ -25,14 +26,19 @@ class QAEngine:
         os.environ['HF_HOME'] = cache_dir
         os.environ['TRANSFORMERS_CACHE'] = cache_dir
         
-        # Cargar pipeline de QA
-        self.qa_pipeline = pipeline(
-            "question-answering",
-            model=model_name,
-            tokenizer=model_name,
-            device=-1,  # Forzar CPU (-1 significa CPU en transformers)
-            model_kwargs={'cache_dir': cache_dir}
+        # Cargar modelo y tokenizer directamente
+        self.model = AutoModelForQuestionAnswering.from_pretrained(
+            model_name,
+            cache_dir=cache_dir
         )
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_name,
+            cache_dir=cache_dir
+        )
+        
+        # Forzar CPU
+        self.device = torch.device('cpu')
+        self.model.to(self.device)
         
         self.model_name = model_name
         # Límite de tokens del modelo (distilbert tiene ~512)
@@ -66,25 +72,52 @@ class QAEngine:
         combined_context = self._combine_contexts(contexts)
         
         try:
-            # Ejecutar el modelo de QA
-            result = self.qa_pipeline(
-                question=question,
-                context=combined_context,
-                max_answer_len=200,
-                handle_impossible_answer=True
+            # Tokenizar input
+            inputs = self.tokenizer(
+                question,
+                combined_context,
+                max_length=self.max_length,
+                truncation=True,
+                return_tensors="pt"
+            ).to(self.device)
+            
+            # Ejecutar el modelo
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+            
+            # Obtener respuesta
+            answer_start = torch.argmax(outputs.start_logits)
+            answer_end = torch.argmax(outputs.end_logits) + 1
+            
+            # Calcular score de confianza
+            start_score = torch.max(outputs.start_logits).item()
+            end_score = torch.max(outputs.end_logits).item()
+            score = (start_score + end_score) / 2
+            
+            # Convertir score de logit a probabilidad aproximada
+            score = 1 / (1 + abs(score))  # Normalización simple
+            
+            # Extraer texto de la respuesta
+            answer = self.tokenizer.convert_tokens_to_string(
+                self.tokenizer.convert_ids_to_tokens(
+                    inputs['input_ids'][0][answer_start:answer_end]
+                )
             )
             
+            # Limpiar respuesta
+            answer = answer.strip()
+            
             # Verificar score mínimo
-            if result['score'] < min_score:
+            if score < min_score or not answer:
                 return {
                     'answer': "No se encontró una respuesta confiable en el documento.",
-                    'score': result['score'],
+                    'score': score,
                     'context_used': combined_context[:500] + "..."
                 }
             
             return {
-                'answer': result['answer'],
-                'score': result['score'],
+                'answer': answer,
+                'score': score,
                 'context_used': combined_context
             }
             
