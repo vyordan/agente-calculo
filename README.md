@@ -36,7 +36,7 @@ docker run -p 8501:8501 agente-calculo
 Luego abre http://localhost:8501 en tu navegador.
 
 ## Uso manual (sin Docker)
-
+Antes de ejecutar los siguientes ocmandos se sugiere usar un entorno virtual de python :) es buena practica
 ```bash
 # Instalar dependencias
 pip install -r requirements.txt
