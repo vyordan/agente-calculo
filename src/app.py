@@ -48,7 +48,7 @@ def main():
     
     # Sidebar para configuración
     with st.sidebar:
-        st.header("⚙️ Configuración")
+        st.header(" Configuración")
         
         st.markdown("### Documento actual")
         if st.session_state.pdf_processed:
@@ -158,7 +158,7 @@ def main():
         # Campo de pregunta
         question = st.text_input(
             "Escribe tu pregunta sobre el documento:",
-            placeholder="Ejemplo: ¿Cuál es la derivada de x^2? o ¿Qué es una integral definida?",
+            placeholder="Ejemplo: ¿Cuál es la derivada de (x^2)? ?",
             key="question_input"
         )
         

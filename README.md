@@ -50,6 +50,7 @@ streamlit run src/app.py
 ```
 ### Estructura
 agente-calculo/
+
 ├── src/ # Código fuente (app, chunker, embedder, qa_engine, solver…)
 
 ├── tests/ # Tests unitarios
