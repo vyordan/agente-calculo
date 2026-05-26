@@ -4,7 +4,7 @@
 # Agente de Cálculo - QA sobre PDFs
 
 Sistema de preguntas y respuestas (QA) para libros y documentos de cálculo.  
-Permite cargar un PDF, indexarlo semánticamente y realizar consultas en lenguaje natural, obteniendo respuestas extractivas o generativas. Además, resuelve automáticamente derivadas, integrales y límites usando **SymPy**.
+Permite cargar un PDF, indexarlo semánticamente y realizar consultas en lenguaje natural, obteniendo respuestas extractivas y una generativas. Además resuelve automáticamente derivadas, integrales y límites usando **SymPy**.
 
 ## Características principales
 
