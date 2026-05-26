@@ -6,7 +6,7 @@ Esto permite que la aplicación funcione completamente offline.
 import os
 import yaml
 from sentence_transformers import SentenceTransformer
-from transformers import AutoModelForQuestionAnswering, AutoTokenizer
+from transformers import AutoModelForQuestionAnswering, AutoTokenizer, AutoModelForSeq2SeqLM
 
 def load_config():
     """Carga la configuración desde config.yaml"""
@@ -31,24 +31,37 @@ def download_models():
     print("=" * 60)
     
     # 1. Descargar modelo de embeddings
-    print(f"\n[1/2] Descargando modelo de embeddings: {config['embedding_model']}")
+    print(f"\n[1/3] Descargando modelo de embeddings: {config['embedding_model']}")
     embedding_model = SentenceTransformer(
         config['embedding_model'],
         cache_folder=cache_dir
     )
-    print(f"✓ Modelo de embeddings descargado")
+    print(f"Modelo de embeddings descargado")
     
     # 2. Descargar modelo de QA
-    print(f"\n[2/2] Descargando modelo de QA: {config['qa_model']}")
-    model = AutoModelForQuestionAnswering.from_pretrained(
+    print(f"\n[2/3] Descargando modelo de QA: {config['qa_model']}")
+    qa_model = AutoModelForQuestionAnswering.from_pretrained(
         config['qa_model'],
         cache_dir=cache_dir
     )
-    tokenizer = AutoTokenizer.from_pretrained(
+    qa_tokenizer = AutoTokenizer.from_pretrained(
         config['qa_model'],
         cache_dir=cache_dir
     )
-    print(f"✓ Modelo de QA descargado correctamente")
+    print(f"Modelo de QA descargado correctamente")
+    
+    # 3. Descargar modelo generativo
+    generator_model = config.get('generator_model', 'google/flan-t5-small')
+    print(f"\n[3/3] Descargando modelo generativo: {generator_model}")
+    gen_model = AutoModelForSeq2SeqLM.from_pretrained(
+        generator_model,
+        cache_dir=cache_dir
+    )
+    gen_tokenizer = AutoTokenizer.from_pretrained(
+        generator_model,
+        cache_dir=cache_dir
+    )
+    print(f"Modelo generativo descargado correctamente")
     
     print("\n" + "=" * 60)
     print("Todos los modelos descargados exitosamente")
