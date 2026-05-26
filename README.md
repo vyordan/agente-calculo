@@ -51,10 +51,16 @@ streamlit run src/app.py
 ### Estructura
 agente-calculo/
 ├── src/ # Código fuente (app, chunker, embedder, qa_engine, solver…)
+
 ├── tests/ # Tests unitarios
+
 ├── docker/ # Dockerfile + entrypoint
+
 ├── docker-compose.yml 
+
 ├── download_models.py # Descarga inicial de modelos
+
 ├── config.yaml # Parámetros del pipeline
+
 └── requirements.txt # Lista de dependencias
 
