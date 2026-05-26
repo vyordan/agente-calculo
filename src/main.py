@@ -143,7 +143,7 @@ def ask_question(
             'type': 'not_found'
         }
     
-    print(f"✓ Encontrados {len(relevant_chunks)} fragmentos relevantes")
+    print(f" Encontrados {len(relevant_chunks)} fragmentos relevantes")
     
     # 3. Generar respuesta (modo configurável)
     response_mode = config.get('response_mode', 'generative')
@@ -242,7 +242,7 @@ def main():
     print("="*60 + "\n")
     
     while True:
-        question = input("\n❓ Tu pregunta: ").strip()
+        question = input("\n Tu pregunta: ").strip()
         
         if question.lower() in ['salir', 'exit', 'quit']:
             print(" ")

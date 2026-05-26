@@ -48,7 +48,7 @@ def main():
     
     # Sidebar para configuración
     with st.sidebar:
-        st.header("⚙️ Configuración")
+        st.header(" Configuración")
         
         st.markdown("### Documento actual")
         if st.session_state.pdf_processed:
