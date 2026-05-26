@@ -13,5 +13,7 @@ numpy>=1.24.0
 pandas>=2.0.0
 tqdm>=4.65.0
 
-# Modelo generativo para síntesis de respuestas
+# Modelo generativo para síntesis de respuestas offline
 sentencepiece>=0.1.99
+# Modelo generativo para sintesis de respuestas online
+openai>=1.0.0

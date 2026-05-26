@@ -65,7 +65,7 @@ def solve_math(expression: str, operation: str) -> str:
         operation: Tipo de operación ('derivada', 'integral', 'limite')
         
     Returns:
-        String con el resultado
+        String con el resultado (solo el resultado, sin texto introductorio).
     """
     try:
         # Definir variable simbólica
@@ -77,21 +77,22 @@ def solve_math(expression: str, operation: str) -> str:
         # Parsear la expresión
         expr = parse_expr(expr_clean, transformations=TRANSFORMATIONS)
         
-        # Ejecutar la operación correspondiente
+        # Ejecutar la operación y devolver solo el resultado
         if operation == 'derivada':
             result = sp.diff(expr, x)
-            return f"La derivada de {expr} es: {result}"
+            # Solo el resultado
+            return str(result)
             
         elif operation == 'integral':
             result = sp.integrate(expr, x)
-            return f"La integral de {expr} es: {result} + C"
+            # Solo el resultado, sin "+ C" si no se desea (puedes agregar "+ C" si lo necesitas)
+            return str(result)  # Si quieres la constante, usa: f"{result} + C"
             
         elif operation == 'limite':
-            # Intentar detectar el punto del límite
-            # Por defecto, usar x -> 0
+            # Intentar detectar el punto del límite (por defecto x->0)
             point = 0
             result = sp.limit(expr, x, point)
-            return f"El límite de {expr} cuando x → {point} es: {result}"
+            return str(result)
         
         else:
             return f"Operación '{operation}' no soportada"
