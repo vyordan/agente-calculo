@@ -9,8 +9,8 @@ import re
 
 def split_text(
     text: str,
-    chunk_size: int = 500,
-    overlap: int = 50
+    chunk_size: int = 800,
+    overlap: int = 100
 ) -> List[str]:
     """
     Divide el texto en fragmentos respetando oraciones y párrafos.
@@ -24,7 +24,6 @@ def split_text(
         Lista de strings, cada uno es un fragmento de texto
     """
     # Configurar el splitter con separadores jerárquicos
-    # Orden de prioridad: párrafos dobles → párrafos simples → oraciones → frases → palabras
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=overlap,
@@ -40,7 +39,7 @@ def split_text(
             " ",           # Espacios entre palabras
             ""             # Caracteres individuales (último recurso)
         ],
-        keep_separator=True  # Mantener los separadores en el texto
+        keep_separator=True
     )
     
     # Dividir el texto
@@ -51,6 +50,9 @@ def split_text(
     for chunk in chunks:
         # Limpiar espacios extras
         chunk = chunk.strip()
+        
+        # NUEVO: Limpiar chunk adicional
+        chunk = clean_chunk(chunk)
         
         # Saltar chunks vacíos o muy cortos
         if len(chunk) < 20:
@@ -64,10 +66,37 @@ def split_text(
     return processed_chunks
 
 
+def clean_chunk(chunk: str) -> str:
+    """
+    Limpia un chunk individual para corregir problemas residuales.
+    
+    Args:
+        chunk: Fragmento de texto
+        
+    Returns:
+        Chunk limpio
+    """
+    # Detectar palabras unidas al inicio del chunk
+    # Patrón común: "---PáginaXXX---Laderivada"
+    chunk = re.sub(r'---([A-Za-z])', r'--- \1', chunk)
+    
+    # Separar palabras unidas después de números de página
+    chunk = re.sub(r'(\d{1,3})---([A-Za-z])', r'\1--- \2', chunk)
+    
+    # Corregir espacios alrededor de paréntesis matemáticos
+    chunk = re.sub(r'\(\s+', '(', chunk)
+    chunk = re.sub(r'\s+\)', ')', chunk)
+    
+    # Normalizar espacios múltiples
+    chunk = re.sub(r' {2,}', ' ', chunk)
+    
+    return chunk
+
+
 def split_text_with_metadata(
     text: str,
-    chunk_size: int = 500,
-    overlap: int = 50
+    chunk_size: int = 800,
+    overlap: int = 100
 ) -> List[dict]:
     """
     Divide el texto y retorna chunks con metadata enriquecida.
@@ -185,7 +214,7 @@ def split_by_semantic_sections(text: str, max_chunk_size: int = 800) -> List[str
     for line in lines:
         line_stripped = line.strip()
         
-        # Detectar posibles títulos de sección (líneas cortas, mayúsculas, números)
+        # Detectar posibles títulos de sección
         is_section_header = (
             len(line_stripped) < 60 and
             len(line_stripped) > 0 and
