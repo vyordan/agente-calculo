@@ -5,7 +5,7 @@ chunk_size: 800
 chunk_overlap: 100
 
 # Parámetros de búsqueda
-top_k_chunks: 5
+top_k_chunks: 10
 
 # Modelos
 embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
