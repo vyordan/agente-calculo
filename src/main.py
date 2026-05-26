@@ -13,6 +13,7 @@ from src.chunker import split_text
 from src.embedder import Embedder
 from src.vector_store import VectorStore
 from src.qa_engine import QAEngine
+from src.generator import ResponseGenerator  # NUEVO
 from src.solver import is_math_problem, solve_math
 
 def load_config(config_path: str = 'config.yaml') -> dict:
@@ -97,7 +98,7 @@ def ask_question(
     Pipeline:
     1. Detecta si es problema matemático
     2. Si es matemático: resuelve con SymPy
-    3. Si no: búsqueda semántica + QA extractivo
+    3. Si no: búsqueda semántica + generación de respuesta
     
     Args:
         vector_store: Vector store con documentos indexados
@@ -139,31 +140,88 @@ def ask_question(
             'answer': "No se encontraron fragmentos relevantes en el documento.",
             'score': 0.0,
             'sources': [],
+            'type': 'not_found'
+        }
+    
+    print(f"✓ Encontrados {len(relevant_chunks)} fragmentos relevantes")
+    
+    # 3. Generar respuesta (modo configurável)
+    response_mode = config.get('response_mode', 'generative')
+    contexts = [chunk['content'] for chunk in relevant_chunks]
+    
+    if response_mode == 'generative':
+        # Usar generación de respuesta
+        print(f"Generando respuesta coherente...")
+        generator = ResponseGenerator(
+            model_name=config.get('generator_model', 'google/flan-t5-small'),
+            cache_dir=config['models_cache_dir']
+        )
+        
+        result = generator.generate_answer(question, contexts)
+        
+        return {
+            'answer': result['answer'],
+            'score': result['confidence'],
+            'sources': relevant_chunks,
+            'type': 'generative',
+            'num_contexts': result['num_contexts_used']
+        }
+    
+    elif response_mode == 'extractive':
+        # Usar QA extractivo (comportamiento original)
+        print(f"Extrayendo respuesta...")
+        qa_engine = QAEngine(
+            model_name=config['qa_model'],
+            cache_dir=config['models_cache_dir']
+        )
+        
+        result = qa_engine.answer(
+            question,
+            contexts,
+            min_score=config.get('min_qa_score', 0.01)
+        )
+        
+        return {
+            'answer': result['answer'],
+            'score': result['score'],
+            'sources': relevant_chunks,
             'type': 'extractive'
         }
     
-    print(f"Encontrados {len(relevant_chunks)} fragmentos relevantes")
-    
-    # 3. QA extractivo
-    print(f"Extrayendo respuesta...")
-    qa_engine = QAEngine(
-        model_name=config['qa_model'],
-        cache_dir=config['models_cache_dir']
-    )
-    
-    contexts = [chunk['content'] for chunk in relevant_chunks]
-    result = qa_engine.answer(
-        question,
-        contexts,
-        min_score=config.get('min_qa_score', 0.01)
-    )
-    
-    return {
-        'answer': result['answer'],
-        'score': result['score'],
-        'sources': relevant_chunks,
-        'type': 'extractive'
-    }
+    else:  # hybrid
+        # Intentar ambos y elegir el mejor
+        print(f"Usando modo híbrido...")
+        
+        # Generar ambas respuestas
+        generator = ResponseGenerator(
+            model_name=config.get('generator_model', 'google/flan-t5-small'),
+            cache_dir=config['models_cache_dir']
+        )
+        gen_result = generator.generate_answer(question, contexts)
+        
+        qa_engine = QAEngine(
+            model_name=config['qa_model'],
+            cache_dir=config['models_cache_dir']
+        )
+        ext_result = qa_engine.answer(question, contexts)
+        
+        # Elegir la mejor basándose en confianza
+        if gen_result['confidence'] > ext_result['score']:
+            return {
+                'answer': gen_result['answer'],
+                'score': gen_result['confidence'],
+                'sources': relevant_chunks,
+                'type': 'generative',
+                'alternative': ext_result['answer']
+            }
+        else:
+            return {
+                'answer': ext_result['answer'],
+                'score': ext_result['score'],
+                'sources': relevant_chunks,
+                'type': 'extractive',
+                'alternative': gen_result['answer']
+            }
 
 def main():
     """Punto de entrada CLI (opcional)"""
@@ -187,7 +245,7 @@ def main():
         question = input("\n❓ Tu pregunta: ").strip()
         
         if question.lower() in ['salir', 'exit', 'quit']:
-            #print("Hasta luego!")
+            print(" ")
             break
         
         if not question:
@@ -198,6 +256,7 @@ def main():
         
         print(f"\nRespuesta: {result['answer']}")
         print(f"Confianza: {result['score']:.2%}")
+        print(f"Tipo: {result['type']}")
         
         if result['sources']:
             print(f"\nFuentes ({len(result['sources'])} fragmentos):")
