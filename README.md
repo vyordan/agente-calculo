@@ -34,3 +34,18 @@ docker build -t agente-calculo -f docker/Dockerfile .
 docker run -p 8501:8501 agente-calculo
 ```
 Luego abre http://localhost:8501 en tu navegador.
+
+## Uso manual (sin Docker)
+
+```bash
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Descargar los modelos
+python download_models.py
+
+# Iniciar la applicacion, una vez se tienen las dependencias y los
+#modelos descargados solo es necesario este comando para volver a ejecutar
+streamlit run src/app.py 
+```
+
