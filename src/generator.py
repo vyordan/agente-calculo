@@ -19,7 +19,7 @@ class ResponseGenerator:
         Inicializa el generador de respuestas.
         
         Args:
-            model_name: Nombre del modelo (ej: "google/flan-t5-base")
+            model_name: Nombre del modelo (ej: "google/flan-t5-large")
             cache_dir: Directorio de caché de modelos
         """
         # Configurar variables de entorno
@@ -148,7 +148,7 @@ class ResponseGenerator:
         if len(combined_context) > max_context_chars:
             combined_context = combined_context[:max_context_chars] + "..."
         
-        # Prompt optimizado para Flan-T5-base (mejor que small en seguir instrucciones)
+        # Prompt optimizado para Flan-t5-large (mejor que small en seguir instrucciones)
         prompt = f"""Responde la siguiente pregunta basándote ÚNICAMENTE en el contexto proporcionado. Si la información no está en el contexto, di que no lo sabes.
 
 Contexto:
@@ -171,7 +171,7 @@ Responde de forma clara, completa y en español:"""
         Returns:
             Score de confianza entre 0 y 1
         """
-        # Heurísticas mejoradas para Flan-T5-base
+        # Heurísticas mejoradas para Flan-t5-large
         
         # 1. Respuestas que indican no saber
         uncertainty_phrases = [
@@ -200,7 +200,7 @@ Responde de forma clara, completa y en español:"""
             general_overlap = 0.0
         
         # 4. Calcular score final
-        base_confidence = 0.65  # Base para Flan-T5-base
+        base_confidence = 0.65  # Base para Flan-t5-large
         overlap_bonus = general_overlap * 0.25
         technical_bonus = min(technical_overlap * 0.02, 0.10)
         

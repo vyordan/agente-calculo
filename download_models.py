@@ -51,7 +51,7 @@ def download_models():
     print(f"Modelo de QA descargado correctamente")
     
     # 3. Descargar modelo generativo
-    generator_model = config.get('generator_model', 'google/flan-t5-base')
+    generator_model = config.get('generator_model', 'google/flan-t5-large')
     print(f"\n[3/3] Descargando modelo generativo: {generator_model}")
     gen_model = AutoModelForSeq2SeqLM.from_pretrained(
         generator_model,

@@ -15,7 +15,7 @@ Permite cargar un PDF, indexarlo semánticamente y realizar consultas en lenguaj
   2. División inteligente en chunks (`RecursiveCharacterTextSplitter`).
   3. Embeddings semánticos (`all-MiniLM-L6-v2`).
   4. Almacenamiento vectorial (`ChromaDB`).
-  5. QA extractivo (`distilbert-base-cased-distilled-squad`) y generativo (`google/flan-t5-base`).
+  5. QA extractivo (`distilbert-base-cased-distilled-squad`) y generativo (`google/flan-larget5-large`).
 - **Detección automática de problemas matemáticos** (derivadas, integrales, límites) y resolución simbólica.
 - **Configuración flexible** mediante `config.yaml`.
 

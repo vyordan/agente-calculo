@@ -73,7 +73,7 @@ def main():
         )
         config['response_mode'] = response_mode
         
-        st.text(f"Modelo generativo: flan-t5-base")
+        st.text(f"Modelo generativo: flan-t5-large")
         st.text(f"Modelo embeddings: all-MiniLM-L6-v2")
         st.text(f"Top-K chunks: {config['top_k_chunks']}")
         st.text(f"Chunk size: {config['chunk_size']}")
