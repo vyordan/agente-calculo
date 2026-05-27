@@ -1,7 +1,7 @@
 [![Docker Image Size](https://img.shields.io/docker/image-size/vyordan/agente-calculo?label=Image%20Size)](https://hub.docker.com/r/vyordan/agente-calculo)
 [![Docker Pulls](https://img.shields.io/docker/pulls/vyordan/agente-calculo?label=Pulls)](https://hub.docker.com/r/vyordan/agente-calculo)
 
-# Agente de Cálculo - QA sobre PDFs
+# Agente de Cálculo
 
 Sistema de preguntas y respuestas (QA) para libros y documentos de cálculo.  
 Permite cargar un PDF, indexarlo semánticamente y realizar consultas en lenguaje natural, obteniendo respuestas extractivas y una generativas. Además resuelve automáticamente derivadas, integrales y límites usando **SymPy**.
