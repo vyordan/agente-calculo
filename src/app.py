@@ -1,4 +1,7 @@
 """
+
+hola xd 
+
 Interfaz web con Streamlit para el sistema de QA sobre PDFs.
 Permite subir PDFs, hacer preguntas y ver respuestas con contexto.
 Incluye modo online opcional con deepseek-v3.2.
@@ -45,13 +48,15 @@ def main():
     st.divider()
     
     # Sidebar
+# Solo cambia el sidebar:
+
     with st.sidebar:
-        st.header("Configuracion")
+        st.header("Configuración")
         
-        st.markdown("### Documento actual")
         if st.session_state.pdf_processed:
-            st.success("PDF procesado")
+            st.success(f"PDF procesado")
             st.info(f"Fragmentos: {st.session_state.vector_store.count()}")
+            
             if st.button("Cargar nuevo PDF"):
                 st.session_state.pdf_processed = False
                 st.session_state.vector_store = None
@@ -59,6 +64,13 @@ def main():
                 st.rerun()
         else:
             st.warning("No hay PDF cargado")
+        
+        st.divider()
+        st.markdown("### Información")
+        st.text("Modelo: Qwen2.5-Math-1.5B")
+        st.text("  Especializado en cálculo")
+        st.text(" Embeddings: all-MiniLM-L6-v2")
+        st.caption("Respuestas potenciadas por IA matemática + contexto del PDF")
         
         st.divider()
         

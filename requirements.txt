@@ -12,8 +12,12 @@ pyyaml>=6.0
 numpy>=1.24.0
 pandas>=2.0.0
 tqdm>=4.65.0
+accelerate>=0.20.3
+
 
 # Modelo generativo para síntesis de respuestas offline
 sentencepiece>=0.1.99
 # Modelo generativo para sintesis de respuestas online
 openai>=1.0.0
+# Qwen2.5-Math (especializado en cálculo)
+transformers>=4.40.0
