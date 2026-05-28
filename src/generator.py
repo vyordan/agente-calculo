@@ -1,209 +1,105 @@
 """
-Motor de generación de respuestas usando modelos seq2seq.
-Sintetiza respuestas coherentes a partir de fragmentos recuperados.
+Motor de generación de respuestas.
+Usa Qwen2.5-Math-1.5B optimizado para máxima velocidad en CPU.
 """
 
 import os
-from typing import List, Dict
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from typing import List, Dict
 
-class ResponseGenerator:
-    """
-    Generador de respuestas usando modelos de lenguaje seq2seq.
-    Convierte múltiples fragmentos en una respuesta coherente.
-    """
-    
-    def __init__(self, model_name: str, cache_dir: str):
-        """
-        Inicializa el generador de respuestas.
-        
-        Args:
-            model_name: Nombre del modelo (ej: "google/flan-t5-base")
-            cache_dir: Directorio de caché de modelos
-        """
-        # Configurar variables de entorno
+class QwenMathGenerator:
+    def __init__(self, cache_dir: str):
+        # -------------------- Ajustes de rendimiento global --------------------
+        num_cores = os.cpu_count()  # usa todos los núcleos disponibles
+        os.environ["OMP_NUM_THREADS"] = str(num_cores)
+        os.environ["MKL_NUM_THREADS"] = str(num_cores)
+        torch.set_num_threads(num_cores)
+        torch.set_num_interop_threads(num_cores)
+        # ----------------------------------------------------------------------
+
         os.environ['HF_HOME'] = cache_dir
         os.environ['TRANSFORMERS_CACHE'] = cache_dir
         os.environ['HF_HUB_OFFLINE'] = '1'
         os.environ['TRANSFORMERS_OFFLINE'] = '1'
-        
-        print(f"Cargando modelo generativo: {model_name}")
-        
-        # Cargar modelo y tokenizer
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(
-            model_name,
+
+        print("Cargando Qwen2.5-Math-1.5B")
+
+        self.model = AutoModelForCausalLM.from_pretrained(
+            "Qwen/Qwen2.5-Math-1.5B",
             cache_dir=cache_dir,
-            local_files_only=True
+            local_files_only=True,
+            device_map="cpu",
+            torch_dtype=torch.float32
         )
         self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
+            "Qwen/Qwen2.5-Math-1.5B",
             cache_dir=cache_dir,
             local_files_only=True
         )
-        
-        # Forzar CPU
+
+        # Compilación JIT para acelerar inferencia (solo PyTorch 2.0+)
+        #self.model = torch.compile(self.model, mode="reduce-overhead")
+
+        # Cuantización dinámica a INT8 – descomenta si quieres probar
+        # self.model = torch.quantization.quantize_dynamic(
+        #     self.model, {torch.nn.Linear}, dtype=torch.qint8
+        # )
+
         self.device = torch.device('cpu')
-        self.model.to(self.device)
-        self.model.eval()  # Modo evaluación
-        
-        self.model_name = model_name
-        self.max_input_length = 512
-        
-        print(f"Modelo generativo cargado")
-    
+        self.model.eval()
+        print("Qwen2.5-Math cargado")
+
     def generate_answer(
         self,
         question: str,
-        contexts: List[str],
-        temperature: float = 0.7,
-        num_beams: int = 4,
-        max_length: int = 300
+        contexts: List[str] = None,
+        temperature: float = 0.3,
+        max_new_tokens: int = 256 #se le puede subir a unos 512 para respuestas más largas
     ) -> Dict:
-        """
-        Genera una respuesta sintética a partir de contextos.
-        
-        Args:
-            question: Pregunta del usuario
-            contexts: Lista de fragmentos relevantes
-            temperature: Control de aleatoriedad (0.0 = determinista, 1.0 = creativo)
-            num_beams: Número de beams para beam search
-            max_length: Longitud máxima de la respuesta generada
-            
-        Returns:
-            Dict con 'answer', 'confidence', 'num_contexts_used'
-        """
-        if not contexts:
-            return {
-                'answer': "No encontré información relevante en el documento para responder tu pregunta.",
-                'confidence': 0.0,
-                'num_contexts_used': 0
-            }
-        
         try:
-            # Construir el prompt
-            prompt = self._build_prompt(question, contexts)
-            
-            # Tokenizar
-            inputs = self.tokenizer(
-                prompt,
-                max_length=self.max_input_length,
-                truncation=True,
-                return_tensors="pt"
-            ).to(self.device)
-            
-            # Generar respuesta
+            prompt = self._build_math_prompt(question, contexts or [])
+
+            inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+
             with torch.no_grad():
                 outputs = self.model.generate(
                     **inputs,
-                    max_length=max_length,
-                    num_beams=num_beams,
-                    temperature=max(temperature, 0.01),  # Evitar división por cero
-                    do_sample=temperature > 0,
-                    early_stopping=True,
-                    no_repeat_ngram_size=3,  # Evitar repeticiones
-                    length_penalty=1.0,
-                    repetition_penalty=1.2  # NUEVO: Penalizar repeticiones
+                    max_new_tokens=max_new_tokens,
+                    do_sample=False,                # greedy → más rápido y determinista
+                    pad_token_id=self.tokenizer.eos_token_id,
+                    repetition_penalty=1.2
                 )
-            
-            # Decodificar respuesta
-            answer = self.tokenizer.decode(
-                outputs[0],
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=True
-            )
-            
-            # Calcular confianza aproximada
-            confidence = self._estimate_confidence(answer, contexts)
-            
-            return {
-                'answer': answer.strip(),
-                'confidence': confidence,
-                'num_contexts_used': len(contexts)
-            }
-            
+
+            answer = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            answer = answer[len(prompt):].strip()
+            confidence = self._estimate_confidence(answer)
+
+            return {'answer': answer, 'confidence': confidence, 'source': 'qwen_math'}
+
         except Exception as e:
-            return {
-                'answer': f"Error al generar respuesta: {str(e)}",
-                'confidence': 0.0,
-                'num_contexts_used': 0
-            }
-    
-    def _build_prompt(self, question: str, contexts: List[str]) -> str:
-        """
-        Construye el prompt optimizado para Flan-T5.
-        
-        Args:
-            question: Pregunta del usuario
-            contexts: Fragmentos de contexto
-            
-        Returns:
-            Prompt formateado
-        """
-        # Combinar los 3 contextos más relevantes
-        combined_context = "\n\n".join(contexts[:3])
-        
-        # Limitar longitud total del contexto
-        max_context_chars = self.max_input_length * 3
-        if len(combined_context) > max_context_chars:
-            combined_context = combined_context[:max_context_chars] + "..."
-        
-        # Prompt optimizado para Flan-T5-base (mejor que small en seguir instrucciones)
-        prompt = f"""Responde la siguiente pregunta basándote ÚNICAMENTE en el contexto proporcionado. Si la información no está en el contexto, di que no lo sabes.
+            return {'answer': f"Error: {str(e)}", 'confidence': 0.0, 'source': 'qwen_math'}
 
-Contexto:
-{combined_context}
+    def _build_math_prompt(self, question: str, contexts: List[str]) -> str:
+        
+        return f"""<|im_start|>system
+Eres un profesor experto en matemáticas y cálculo. Proporciona respuestas claras.
+Usa notación matemática clara. Explica los pasos cuando sea necesario. 
+Tu respuesta debe ser totalmente en español.
+<|im_end|>
+<|im_start|>user
+{question}
+<|im_end|>
+<|im_start|>assistant
+"""
 
-Pregunta: {question}
-
-Responde de forma clara, completa y en español:"""
-        
-        return prompt
-    
-    def _estimate_confidence(self, answer: str, contexts: List[str]) -> float:
-        """
-        Estima la confianza de la respuesta generada.
-        
-        Args:
-            answer: Respuesta generada
-            contexts: Contextos usados
-            
-        Returns:
-            Score de confianza entre 0 y 1
-        """
-        # Heurísticas mejoradas para Flan-T5-base
-        
-        # 1. Respuestas que indican no saber
-        uncertainty_phrases = [
-            "no lo sé", "no sé", "no puedo", "no está", "no hay información",
-            "no se menciona", "no se especifica", "i don't know", "not mentioned"
-        ]
-        if any(phrase in answer.lower() for phrase in uncertainty_phrases):
-            return 0.2
-        
-        # 2. Longitud de la respuesta
-        if len(answer) < 15:
+    def _estimate_confidence(self, answer: str) -> float:
+        if not answer or len(answer) < 20:
             return 0.3
-        if len(answer) > 800:  # Muy larga puede ser repetitiva
-            return 0.5
-        
-        # 3. Overlap de palabras con contextos
-        answer_words = set(answer.lower().split())
-        context_words = set(" ".join(contexts).lower().split())
-        
-        # Palabras técnicas/específicas (mayor peso)
-        technical_overlap = len([w for w in answer_words if len(w) > 6 and w in context_words])
-        
-        if len(answer_words) > 0:
-            general_overlap = len(answer_words & context_words) / len(answer_words)
-        else:
-            general_overlap = 0.0
-        
-        # 4. Calcular score final
-        base_confidence = 0.65  # Base para Flan-T5-base
-        overlap_bonus = general_overlap * 0.25
-        technical_bonus = min(technical_overlap * 0.02, 0.10)
-        
-        final_score = base_confidence + overlap_bonus + technical_bonus
-        
-        return min(final_score, 0.95)  # Cap al 95%
+        if any(word in answer.lower() for word in ["no sé", "desconozco", "no puedo"]):
+            return 0.2
+        if len(answer) > 100:
+            return 0.85
+        elif len(answer) > 50:
+            return 0.75
+        return 0.60

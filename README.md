@@ -16,4 +16,3 @@ python download_models.py
 streamlit run src/app.py 
 ```
 
-

@@ -1,29 +1,13 @@
-# Configuración del sistema de QA sobre PDFs de cálculo
+# Configuración del sistema
 
-# Parámetros de chunking mejorados
 chunk_size: 800
 chunk_overlap: 100
+top_k_chunks: 5                 # BM25 usará este valor
 
-# Parámetros de búsqueda
-top_k_chunks: 5
-
-# Modelos
-embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
-qa_model: "distilbert-base-cased-distilled-squad"
-generator_model: "google/flan-t5-base"  # se puede cambiar por long o small que son modelos con mas o menos conocimientos pero asi va a afectar el rendimiento
-
-# Directorios
-persist_directory: "./chroma_db"
 models_cache_dir: "./models_cache"
+use_qwen_math: true
 
-# Configuración de confianza
-min_qa_score: 0.01
-min_generator_confidence: 0.3
-
-# Modo de respuesta (opciones: "extractive", "generative", "hybrid")
+# Parámetros del generador
+generation_temperature: 0.3
+generation_num_beams: 4
 response_mode: "generative"
-
-# Parámetros de generación
-generation_temperature: 0.7  # 0.0 = determinista, 1.0 = creativo
-generation_num_beams: 4  # Beam search (mayor = mejor calidad pero más lento)
-generation_max_length: 300  # Longitud máxima de respuesta
