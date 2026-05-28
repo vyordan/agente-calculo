@@ -1,4 +1,7 @@
 """
+
+hola xd 
+
 Interfaz web con Streamlit para el sistema de QA sobre PDFs.
 Permite subir PDFs, hacer preguntas y ver respuestas con contexto.
 Incluye modo online opcional con deepseek-v3.2.
