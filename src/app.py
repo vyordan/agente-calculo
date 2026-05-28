@@ -61,9 +61,7 @@ def main():
         st.divider()
         st.markdown("### Información")
         st.text("Modelo: Qwen2.5-Math-1.5B")
-        st.text("  Especializado en cálculo")
         st.text("Búsqueda: BM25")
-        st.caption("Respuestas potenciadas por IA matemática + contexto del PDF")
         
         st.divider()
         

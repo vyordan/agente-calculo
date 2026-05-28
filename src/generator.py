@@ -55,7 +55,7 @@ class QwenMathGenerator:
         question: str,
         contexts: List[str] = None,
         temperature: float = 0.3,
-        max_new_tokens: int = 512
+        max_new_tokens: int = 256 #se le puede subir a unos 512 para respuestas más largas
     ) -> Dict:
         try:
             prompt = self._build_math_prompt(question, contexts or [])
@@ -84,7 +84,8 @@ class QwenMathGenerator:
         
         return f"""<|im_start|>system
 Eres un profesor experto en matemáticas y cálculo. Proporciona respuestas claras.
-Usa notación matemática clara. Explica los pasos cuando sea necesario. Tu respuesta debe ser en Español.
+Usa notación matemática clara. Explica los pasos cuando sea necesario. 
+Tu respuesta debe ser totalmente en español.
 <|im_end|>
 <|im_start|>user
 {question}
