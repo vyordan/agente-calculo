@@ -1,8 +1,5 @@
 """
-
-hola xd 
-
-Interfaz web con Streamlit para el sistema de QA sobre PDFs.
+Interfaz web con Streamlit para el sistema de QA sobre PDFs (BM25).
 Permite subir PDFs, hacer preguntas y ver respuestas con contexto.
 Incluye modo online opcional con deepseek-v3.2.
 """
@@ -25,8 +22,9 @@ st.set_page_config(
 )
 
 def init_session_state():
-    if 'vector_store' not in st.session_state:
-        st.session_state.vector_store = None
+    # Usamos 'retriever' en lugar de 'vector_store'
+    if 'retriever' not in st.session_state:
+        st.session_state.retriever = None
     if 'pdf_processed' not in st.session_state:
         st.session_state.pdf_processed = False
     if 'history' not in st.session_state:
@@ -40,26 +38,21 @@ def main():
     init_session_state()
     
     st.title("Agente sobre Libros de Calculo")
-    st.markdown("""
-    Sube un PDF de calculo y haz preguntas. Con el modo online obtendras una
-    respuesta adicional generada por un modelo de lenguaje avanzado.
-    """)
     
     st.divider()
     
     # Sidebar
-# Solo cambia el sidebar:
-
     with st.sidebar:
         st.header("Configuración")
         
         if st.session_state.pdf_processed:
-            st.success(f"PDF procesado")
-            st.info(f"Fragmentos: {st.session_state.vector_store.count()}")
+            st.success("PDF procesado")
+            num_chunks = len(st.session_state.retriever.corpus) if st.session_state.retriever else 0
+            st.info(f"Fragmentos: {num_chunks}")
             
             if st.button("Cargar nuevo PDF"):
                 st.session_state.pdf_processed = False
-                st.session_state.vector_store = None
+                st.session_state.retriever = None
                 st.session_state.history = []
                 st.rerun()
         else:
@@ -69,7 +62,7 @@ def main():
         st.markdown("### Información")
         st.text("Modelo: Qwen2.5-Math-1.5B")
         st.text("  Especializado en cálculo")
-        st.text(" Embeddings: all-MiniLM-L6-v2")
+        st.text("Búsqueda: BM25")
         st.caption("Respuestas potenciadas por IA matemática + contexto del PDF")
         
         st.divider()
@@ -85,8 +78,7 @@ def main():
         )
         config['response_mode'] = response_mode
         
-        st.text(f"Modelo generativo: flan-t5-base")
-        st.text(f"Modelo embeddings: all-MiniLM-L6-v2")
+        st.text("Modelo generativo: Qwen2.5-Math-1.5B")
         st.text(f"Top-K chunks: {config['top_k_chunks']}")
         st.text(f"Chunk size: {config['chunk_size']}")
         
@@ -133,15 +125,15 @@ def main():
                     progress_bar.progress(20)
                     status_text.text("Dividiendo en fragmentos...")
                     progress_bar.progress(40)
-                    status_text.text("Generando embeddings...")
+                    status_text.text("Construyendo índice BM25...")
                     progress_bar.progress(60)
                     
-                    vector_store = process_pdf(tmp_path, st.session_state.config)
+                    retriever = process_pdf(tmp_path, st.session_state.config)
                     
-                    status_text.text("Almacenando en vector store...")
+                    status_text.text("Índice BM25 listo...")
                     progress_bar.progress(80)
                     
-                    st.session_state.vector_store = vector_store
+                    st.session_state.retriever = retriever
                     st.session_state.pdf_processed = True
                     
                     progress_bar.progress(100)
@@ -149,7 +141,8 @@ def main():
                     
                     os.unlink(tmp_path)
                     
-                    st.success(f"PDF indexado con {vector_store.count()} fragmentos")
+                    num_chunks = len(retriever.corpus)
+                    st.success(f"PDF indexado con {num_chunks} fragmentos (BM25)")
                     st.rerun()
                     
                 except Exception as e:
@@ -170,114 +163,121 @@ def main():
             submit_button = st.button("Preguntar", type="primary")
         
         if submit_button and question:
-            # Respuesta local offline
-            with st.spinner("Generando respuesta local..."):
-                try:
-                    result = ask_question(
-                        st.session_state.vector_store,
-                        question,
-                        st.session_state.config
-                    )
-                    st.session_state.history.append({
-                        'question': question,
-                        'result': result
-                    })
-                except Exception as e:
-                    st.error(f"Error en respuesta local: {str(e)}")
-                    result = None
-            
-            # Si el modo online esta activo, obtener respuesta extra
-            if result is not None and st.session_state.online_mode:
+            online_answer = None
+            result = None
+
+            # --- 1. Respuesta online (si el modo está activo) ---
+            if st.session_state.online_mode:
                 with st.spinner("Generando respuesta online (deepseek-v3.2)..."):
                     try:
-                        online_response_placeholder = st.empty()
+                        online_placeholder = st.empty()
                         full_online_answer = ""
                         stream = generate_online_response(question, stream=True)
                         for chunk in stream:
                             full_online_answer += chunk
-                            online_response_placeholder.markdown(full_online_answer)
+                            online_placeholder.markdown(full_online_answer)
                         online_answer = full_online_answer
                     except Exception as e:
                         online_answer = f"Error al consultar el modelo online: {str(e)}"
                         st.error(online_answer)
-                
-                st.session_state.history[-1]['online_answer'] = online_answer
+
+                st.divider()  # separador visual
+
+            # --- 2. Respuesta local offline (siempre se ejecuta) ---
+            with st.spinner("Generando respuesta local..."):
+                try:
+                    result = ask_question(
+                        st.session_state.retriever,
+                        question,
+                        st.session_state.config
+                    )
+                except Exception as e:
+                    st.error(f"Error en respuesta local: {str(e)}")
+                    result = None
+
+            # --- Guardar en historial ---
+            entry = {'question': question, 'result': result}
+            if online_answer is not None:
+                entry['online_answer'] = online_answer
+            st.session_state.history.append(entry)
         
-        # Mostrar ultima respuesta
+        # Mostrar la última respuesta
         if st.session_state.history:
             latest = st.session_state.history[-1]
             result = latest['result']
-            
+
             st.divider()
             st.subheader("Respuesta")
-            
-            # Sin iconos, solo el tipo de respuesta
-            response_type_names = {
-                'mathematical': 'Problema matematico',
-                'generative': 'Respuesta generada',
-                'extractive': 'Respuesta extractiva',
-                'not_found': 'No encontrado'
-            }
-            type_name = response_type_names.get(result['type'], 'Respuesta')
-            st.info(f"**{type_name}**")
-            
-            st.markdown("### Respuesta:")
-            st.markdown(f"**{result['answer']}**")
-            
-            if result['type'] in ['generative', 'extractive']:
-                score = result['score']
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.progress(score)
-                with col2:
-                    if score > 0.7:
-                        st.success(f"{score:.1%}")
-                    elif score > 0.4:
-                        st.warning(f"{score:.1%}")
-                    else:
-                        st.error(f"{score:.1%}")
-                st.caption(f"Confianza: {score:.1%}")
-            
-            if 'alternative' in result:
-                with st.expander("Ver respuesta alternativa"):
-                    st.markdown(result['alternative'])
-            
-            if result['sources']:
-                st.divider()
-                st.markdown("### Fragmentos fuente del documento")
-                st.caption(f"Se encontraron {len(result['sources'])} fragmentos relevantes")
-                tabs = st.tabs([f"Fragmento {i+1}" for i in range(len(result['sources']))])
-                for i, (tab, source) in enumerate(zip(tabs, result['sources'])):
-                    with tab:
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            st.markdown(f"**Fragmento {i+1}**")
-                        with col2:
-                            similarity = source['score']
-                            if similarity > 0.8:
-                                st.success(f"Similitud: {similarity:.1%}")
-                            elif similarity > 0.6:
-                                st.info(f"Similitud: {similarity:.1%}")
-                            else:
-                                st.warning(f"Similitud: {similarity:.1%}")
-                        st.text_area(
-                            f"Contenido del fragmento {i+1}",
-                            source['content'],
-                            height=200,
-                            key=f"source_{i}_{len(st.session_state.history)}",
-                            label_visibility="collapsed"
-                        )
-                        st.caption(f"Longitud: {len(source['content'])} caracteres")
-            
-            # Mostrar respuesta online si existe
+
+            # --- Mostrar online primero ---
             if 'online_answer' in latest:
-                st.divider()
                 st.markdown("### Respuesta del modelo online (deepseek-v3.2)")
                 if latest['online_answer'].startswith("Error"):
                     st.error(latest['online_answer'])
                 else:
-                    with st.expander("Ver respuesta online completa"):
-                        st.markdown(latest['online_answer'])
+                    st.markdown(latest['online_answer'])
+                st.divider()
+
+            # --- Mostrar respuesta local ---
+            if result is not None:
+                response_type_names = {
+                    'mathematical': 'Problema matemático',
+                    'generative': 'Respuesta generada',
+                    'extractive': 'Respuesta extractiva',
+                    'not_found': 'No encontrado'
+                }
+                type_name = response_type_names.get(result['type'], 'Respuesta')
+                st.info(f"**{type_name}**")
+
+                st.markdown("### Respuesta local:")
+                st.markdown(f"**{result['answer']}**")
+
+                if result['type'] in ['generative', 'extractive']:
+                    score = result['score']
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.progress(score)
+                    with col2:
+                        if score > 0.7:
+                            st.success(f"{score:.1%}")
+                        elif score > 0.4:
+                            st.warning(f"{score:.1%}")
+                        else:
+                            st.error(f"{score:.1%}")
+                    st.caption(f"Confianza: {score:.1%}")
+
+                if 'alternative' in result:
+                    with st.expander("Ver respuesta alternativa"):
+                        st.markdown(result['alternative'])
+
+                if result['sources']:
+                    st.divider()
+                    st.markdown("### Fragmentos fuente del documento")
+                    st.caption(f"Se encontraron {len(result['sources'])} fragmentos relevantes")
+                    tabs = st.tabs([f"Fragmento {i+1}" for i in range(len(result['sources']))])
+                    for i, (tab, source) in enumerate(zip(tabs, result['sources'])):
+                        with tab:
+                            col1, col2 = st.columns([3, 1])
+                            with col1:
+                                st.markdown(f"**Fragmento {i+1}**")
+                            with col2:
+                                similarity = source['score']
+                                if similarity > 0.8:
+                                    st.success(f"Similitud: {similarity:.1%}")
+                                elif similarity > 0.6:
+                                    st.info(f"Similitud: {similarity:.1%}")
+                                else:
+                                    st.warning(f"Similitud: {similarity:.1%}")
+                            st.text_area(
+                                f"Contenido del fragmento {i+1}",
+                                source['content'],
+                                height=200,
+                                key=f"source_{i}_{len(st.session_state.history)}",
+                                label_visibility="collapsed"
+                            )
+                            st.caption(f"Longitud: {len(source['content'])} caracteres")
+            else:
+                st.warning("No se pudo generar una respuesta local.")
         
         # Historial
         if len(st.session_state.history) > 1:
